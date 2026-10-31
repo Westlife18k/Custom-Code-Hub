@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Bet Code Hub"
+description = "A Ghana-focused storefront for browsing football prediction-code packages, reviewing one-time prices in Ghana cedis, and accessing customer code lookup. This first working version uses clearly labeled demo package data; live checkout is not connected."
+version = "1.0.0"
+id = "artifacts/bet-code-hub"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21817
+
+[services.development]
+run = "pnpm --filter @workspace/bet-code-hub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bet-code-hub", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bet-code-hub/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21817"
+BASE_PATH = "/"
