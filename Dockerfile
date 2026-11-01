@@ -33,9 +33,13 @@ RUN pnpm --filter @workspace/api-server run build \
 # ---------------------------------------------------------------------------
 FROM node:24-alpine AS runtime
 
-RUN apk upgrade --no-cache \
+# Patch OS packages. The apk index cache is intentionally kept (not deleted):
+# image vulnerability scanners read /var/cache/apk to enumerate installed
+# Alpine packages, and an empty/missing cache makes that extraction fail.
+RUN apk update \
+ && apk upgrade --no-cache \
  && apk add --no-cache libstdc++ \
- && rm -rf /var/cache/apk/*
+ && rm -f /var/lib/apk/db/lock
 
 WORKDIR /app
 
