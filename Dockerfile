@@ -19,6 +19,9 @@ ENV CI=1
 # Copy the whole workspace so the pnpm lockfile and every workspace package match.
 COPY . .
 
+# Drop any node_modules that came from the build context so the install is clean.
+RUN rm -rf node_modules artifacts/*/node_modules lib/*/node_modules scripts/node_modules
+
 RUN pnpm install --frozen-lockfile
 
 # Build the API server bundle (artifacts/api-server/dist) and the storefront (dist/public).
