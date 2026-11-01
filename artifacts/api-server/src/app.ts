@@ -67,6 +67,16 @@ app.use((req, res) => {
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const issues = (error as { issues?: { path: (string | number)[]; message: string }[] })?.issues;
 
+  // The API boots without a database so the storefront and /api/healthz stay
+  // available; data routes report a clear 503 instead of a generic 500.
+  if ((error as { name?: string })?.name === "DatabaseNotConfiguredError") {
+    logger.error({ err: error }, "Data route called without DATABASE_URL");
+    res.status(503).json({
+      error: "The store database is not configured yet. Set DATABASE_URL to enable packages and orders.",
+    });
+    return;
+  }
+
   if (Array.isArray(issues)) {
     res.status(400).json({
       error: issues.map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`).join("; "),
