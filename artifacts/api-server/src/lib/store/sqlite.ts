@@ -73,17 +73,60 @@ const SCHEMA_STATEMENTS = [
   `create index if not exists orders_customer_email_idx on orders (customer_email)`,
 ];
 
-function resolveDatabasePath(): string {
+const DATABASE_FILENAME = "bet-code-hub.sqlite";
+const IN_MEMORY_LOCATION = ":memory:";
+
+/**
+ * Ordered list of file locations to try, most durable first. An operator-set
+ * path always wins; otherwise the persistent disk mount (/app/data in the
+ * container image) is preferred over the working directory or a temp dir.
+ */
+function candidatePaths(): string[] {
   const configured = process.env["SQLITE_PATH"]?.trim();
-  if (configured) {
-    if (configured === ":memory:") return configured;
-    fs.mkdirSync(path.dirname(configured), { recursive: true });
-    return configured;
+  if (configured === IN_MEMORY_LOCATION) return [IN_MEMORY_LOCATION];
+
+  const candidates: string[] = [];
+  if (configured) candidates.push(configured);
+
+  const dataDir = process.env["DATA_DIR"]?.trim();
+  if (dataDir) candidates.push(path.join(dataDir, DATABASE_FILENAME));
+
+  candidates.push(path.join(process.cwd(), "data", DATABASE_FILENAME));
+  candidates.push(path.join(os.tmpdir(), DATABASE_FILENAME));
+
+  return [...new Set(candidates)];
+}
+
+/**
+ * Opens the first candidate location that is actually usable. A read-only or
+ * missing mount must not silently degrade to a throwaway in-memory database on
+ * the first attempt, so every candidate gets a real write test before the
+ * in-memory database is chosen as a last resort.
+ */
+function openDatabase(DatabaseSync: SqliteModule["DatabaseSync"]): {
+  database: SqliteDatabase;
+  location: string;
+} {
+  for (const candidate of candidatePaths()) {
+    if (candidate === IN_MEMORY_LOCATION) {
+      logger.warn("No persistent SQLite location configured; using an in-memory database");
+      return { database: new DatabaseSync(IN_MEMORY_LOCATION), location: IN_MEMORY_LOCATION };
+    }
+
+    try {
+      fs.mkdirSync(path.dirname(candidate), { recursive: true });
+      const database = new DatabaseSync(candidate);
+      // `pragma journal_mode = WAL` needs a writable directory; running it here
+      // proves the mount is genuinely usable before we commit to it.
+      database.exec("pragma journal_mode = WAL");
+      return { database, location: candidate };
+    } catch (error) {
+      logger.warn({ candidate, err: error }, "SQLite location is not usable; trying the next one");
+    }
   }
 
-  const dataDir = process.env["DATA_DIR"]?.trim() || path.join(process.cwd(), "data");
-  fs.mkdirSync(dataDir, { recursive: true });
-  return path.join(dataDir, "bet-code-hub.sqlite");
+  logger.error("No writable SQLite location found; falling back to an in-memory database");
+  return { database: new DatabaseSync(IN_MEMORY_LOCATION), location: IN_MEMORY_LOCATION };
 }
 
 function toNumber(value: unknown): number {
