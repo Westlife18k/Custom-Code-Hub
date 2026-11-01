@@ -1,7 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, eq, sql } from "drizzle-orm";
 
-import { db, ordersTable, packagesTable } from "@workspace/db";
 import {
   InitializePaymentBody,
   InitializePaymentResponse,
@@ -18,6 +16,7 @@ import {
   isValidWebhookSignature,
   verifyTransaction,
 } from "../lib/paystack";
+import { getStore } from "../lib/store";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -41,53 +40,38 @@ function sendPaystackError(res: Response, error: unknown): void {
 }
 
 /**
- * Marks an order paid, but only once. Repeated webhooks/verifications are safe.
+ * Marks an order paid, but only once, and only when the amount Paystack
+ * reports matches what the order was created for. Repeated webhooks and
+ * verifications are safe.
  */
-async function markOrderPaid(input: {
+async function releaseOrder(input: {
   reference: string;
   transactionId?: string | number | null;
   amountKobo?: number | null;
 }): Promise<void> {
-  const [existing] = await db
-    .select({
-      id: ordersTable.id,
-      amountKobo: ordersTable.amountKobo,
-      status: ordersTable.status,
-    })
-    .from(ordersTable)
-    .where(eq(ordersTable.reference, input.reference))
-    .limit(1);
+  const store = getStore();
+  const order = await store.getOrderSummary(input.reference);
 
-  if (!existing) {
+  if (!order) {
     logger.warn({ reference: input.reference }, "Paid event for unknown order reference");
     return;
   }
 
-  if (existing.status === "paid") return;
+  if (order.status === "paid") return;
 
   if (
     typeof input.amountKobo === "number" &&
     Number.isFinite(input.amountKobo) &&
-    input.amountKobo !== Number(existing.amountKobo)
+    input.amountKobo !== order.amountKobo
   ) {
     logger.warn(
-      { reference: input.reference, expected: existing.amountKobo, received: input.amountKobo },
+      { reference: input.reference, expected: order.amountKobo, received: input.amountKobo },
       "Paystack amount mismatch, refusing to release code",
     );
     return;
   }
 
-  await db
-    .update(ordersTable)
-    .set({
-      status: "paid",
-      paidAt: new Date(),
-      paystackTransactionId:
-        input.transactionId === undefined || input.transactionId === null
-          ? null
-          : String(input.transactionId),
-    })
-    .where(and(eq(ordersTable.reference, input.reference), sql`${ordersTable.status} <> 'paid'`));
+  await store.markOrderPaid({ reference: input.reference, transactionId: input.transactionId });
 }
 
 /**
@@ -105,14 +89,8 @@ router.post("/payments/initialize", async (req, res) => {
     return;
   }
 
-  const [pkg] = await db
-    .select({
-      id: packagesTable.id,
-      priceKobo: packagesTable.priceKobo,
-    })
-    .from(packagesTable)
-    .where(and(eq(packagesTable.id, packageId), eq(packagesTable.active, true)))
-    .limit(1);
+  const store = getStore();
+  const pkg = await store.findActivePackage(packageId);
 
   if (!pkg) {
     res.status(404).json({ error: "That package is not available." });
@@ -121,18 +99,17 @@ router.post("/payments/initialize", async (req, res) => {
 
   const reference = createOrderReference();
 
-  await db.insert(ordersTable).values({
+  await store.createOrder({
     reference,
     packageId: pkg.id,
     customerEmail: email.trim().toLowerCase(),
-    amountKobo: Number(pkg.priceKobo),
-    status: "pending",
+    amountKobo: pkg.priceKobo,
   });
 
   try {
     const initialized = await initializeTransaction({
       email: email.trim(),
-      amountKobo: Number(pkg.priceKobo),
+      amountKobo: pkg.priceKobo,
       reference,
       channel,
       callbackUrl: `${publicBaseUrl(req)}/my-codes?reference=${encodeURIComponent(reference)}&email=${encodeURIComponent(email.trim())}`,
@@ -145,7 +122,7 @@ router.post("/payments/initialize", async (req, res) => {
       }),
     );
   } catch (error) {
-    await db.update(ordersTable).set({ status: "failed" }).where(eq(ordersTable.reference, reference));
+    await store.updateOrderStatus(reference, "failed");
     sendPaystackError(res, error);
   }
 });
@@ -167,16 +144,13 @@ router.post("/payments/verify", async (req, res) => {
     const success = result.status === "success";
 
     if (success) {
-      await markOrderPaid({
+      await releaseOrder({
         reference,
         transactionId: result.id,
         amountKobo: typeof result.amount === "number" ? result.amount : null,
       });
     } else {
-      await db
-        .update(ordersTable)
-        .set({ status: "failed" })
-        .where(and(eq(ordersTable.reference, reference), eq(ordersTable.status, "pending")));
+      await getStore().updateOrderStatus(reference, "failed", "pending");
     }
 
     res.json(VerifyPaymentResponse.parse({ success, reference }));
@@ -212,7 +186,7 @@ router.post("/payments/webhook", async (req, res) => {
   }
 
   if (event.event === "charge.success" && event.data?.reference && event.data.status === "success") {
-    await markOrderPaid({
+    await releaseOrder({
       reference: event.data.reference,
       transactionId: event.data.id,
       amountKobo: typeof event.data.amount === "number" ? event.data.amount : null,
