@@ -69,6 +69,20 @@ catalog:
 
 autoInstallPeers: false
 
+# The production image builds on Alpine (musl) while local/dev builds run on
+# glibc, so the lockfile must record both native variants of rollup,
+# lightningcss and @tailwindcss/oxide. Without the musl entries
+# `vite build` fails inside the container with
+# "Cannot find module '@rollup/rollup-linux-x64-musl'".
+supportedArchitectures:
+  os:
+    - linux
+  cpu:
+    - x64
+  libc:
+    - glibc
+    - musl
+
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
