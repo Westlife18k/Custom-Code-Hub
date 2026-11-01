@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db, ordersTable, packagesTable } from "@workspace/db";
@@ -28,7 +28,7 @@ function publicBaseUrl(req: Request): string {
   return `${req.protocol}://${req.get("host") ?? "localhost"}`;
 }
 
-function sendPaystackError(res: Parameters<typeof router.get>[1] extends never ? never : any, error: unknown) {
+function sendPaystackError(res: Response, error: unknown): void {
   if (error instanceof PaystackNotConfiguredError) {
     res.status(503).json({ error: error.message });
     return;
