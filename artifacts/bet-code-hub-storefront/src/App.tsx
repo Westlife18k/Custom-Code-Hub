@@ -13,7 +13,30 @@ import {
   Router as WouterRouter,
 } from 'wouter';
 
-const queryClient = new QueryClient();
+function httpStatus(error: unknown): number | null {
+  if (error && typeof error === 'object' && 'status' in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === 'number') return status;
+  }
+  return null;
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // An API that answered (4xx/5xx) will not fix itself on a retry, and the
+      // storefront should surface that failure instead of spinning. Only
+      // transport-level failures are retried, once.
+      retry: (failureCount, error) => (httpStatus(error) === null ? failureCount < 1 : false),
+      retryDelay: 800,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: false,
+    },
+  },
+});
 
 function Router() {
   return (
