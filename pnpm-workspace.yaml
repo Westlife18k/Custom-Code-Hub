@@ -75,6 +75,10 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Security patches (see advisories the dependency scanner reports)
+  "body-parser@^2": "^2.4.0"
+  "undici@^7": "^7.30.1"
+  "zod@^4": "^4.6.6"
   "proxy-addr@^2": "^2.0.8"
   "source-map-js@^1": "^1.2.2"
   "fast-uri@^3": "^3.1.8"
