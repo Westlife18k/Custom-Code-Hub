@@ -146,7 +146,7 @@ function openDatabase(DatabaseSync: SqliteModule["DatabaseSync"]): {
     }
 
     try {
-      fs.mkdirSync(path.dirname(candidate), { recursive: true });
+      ensureDirectory(path.dirname(candidate));
       const database = new DatabaseSync(candidate);
       // `pragma journal_mode = WAL` needs a writable directory; running it here
       // proves the mount is genuinely usable before we commit to it.
