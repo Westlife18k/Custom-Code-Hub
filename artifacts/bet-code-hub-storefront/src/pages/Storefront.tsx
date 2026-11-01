@@ -6,6 +6,7 @@ import {
   type PublicPackage,
   type PaymentInitializeInputChannel,
 } from '@workspace/api-client-react';
+import { rememberLastOrder } from '@/lib/last-order';
 import {
   ArrowDown,
   ArrowRight,
@@ -18,8 +19,6 @@ import {
 } from 'lucide-react';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-export const LAST_ORDER_STORAGE_KEY = 'bch:last-order';
 
 function formatGhs(priceKobo: number) {
   return (priceKobo / 100).toFixed(2);
@@ -92,14 +91,7 @@ export default function Storefront() {
       { data: { packageId: selectedPackage.id, email: trimmedEmail, channel } },
       {
         onSuccess: (result) => {
-          try {
-            window.sessionStorage.setItem(
-              LAST_ORDER_STORAGE_KEY,
-              JSON.stringify({ reference: result.reference, email: trimmedEmail }),
-            );
-          } catch {
-            // Storage can be unavailable in private modes; the callback URL still carries the reference.
-          }
+          rememberLastOrder({ reference: result.reference, email: trimmedEmail });
           window.location.href = result.authorization_url;
         },
         onError: (error) => {
