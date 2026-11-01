@@ -108,7 +108,7 @@ function candidatePaths(): string[] {
  */
 function ensureDirectory(directory: string): void {
   const segments = path.resolve(directory).split(path.sep).filter(Boolean);
-  let current = path.sep;
+  let current: string = path.sep;
 
   for (const segment of segments) {
     current = path.join(current, segment);
