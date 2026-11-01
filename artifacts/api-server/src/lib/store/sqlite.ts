@@ -150,18 +150,10 @@ export function createSqliteStore(): Store {
     if (database) return database;
 
     const { DatabaseSync } = loadSqlite();
-    try {
-      location = resolveDatabasePath();
-      database = new DatabaseSync(location);
-    } catch (error) {
-      // A read-only filesystem must not take the whole API down; fall back to a
-      // throwaway in-memory database so the storefront still renders.
-      logger.error({ err: error, location }, "SQLite file unavailable; using in-memory database");
-      location = ":memory:";
-      database = new DatabaseSync(location);
-    }
+    const opened = openDatabase(DatabaseSync);
+    database = opened.database;
+    location = opened.location;
 
-    database.exec("pragma journal_mode = WAL");
     database.exec("pragma foreign_keys = ON");
     return database;
   }
