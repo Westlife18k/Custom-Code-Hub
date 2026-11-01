@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
-import { and, eq, sql } from "drizzle-orm";
 
-import { db, ordersTable, packagesTable } from "@workspace/db";
 import { LookupOrderBody, LookupOrderResponse } from "@workspace/api-zod";
+import { getStore } from "../lib/store";
 
 const router: IRouter = Router();
 
@@ -13,21 +12,7 @@ const router: IRouter = Router();
 router.post("/orders/lookup", async (req, res) => {
   const { email, reference } = LookupOrderBody.parse(req.body);
 
-  const [order] = await db
-    .select({
-      status: ordersTable.status,
-      title: packagesTable.title,
-      code: packagesTable.bettingCode,
-    })
-    .from(ordersTable)
-    .innerJoin(packagesTable, eq(ordersTable.packageId, packagesTable.id))
-    .where(
-      and(
-        eq(ordersTable.reference, reference),
-        sql`lower(${ordersTable.customerEmail}) = ${email.trim().toLowerCase()}`,
-      ),
-    )
-    .limit(1);
+  const order = await getStore().lookupOrder({ reference, email });
 
   if (!order) {
     res.status(404).json({ error: "No order found for that email and reference." });
