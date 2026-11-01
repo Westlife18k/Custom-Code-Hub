@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Bet Code Hub Storefront"
+description = "A responsive Ghana-focused football package storefront. Visitors can browse clearly labeled demo offers, review package details, and access a My codes page that clearly explains purchase lookup is unavailable until order services are connected."
+version = "1.0.0"
+id = "artifacts/bet-code-hub-storefront"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20724
+
+[services.development]
+run = "pnpm --filter @workspace/bet-code-hub-storefront run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bet-code-hub-storefront", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/bet-code-hub-storefront/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20724"
+BASE_PATH = "/"
