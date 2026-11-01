@@ -30,6 +30,11 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
+        // The workspace catalog installs @tanstack/react-query v5; without this
+        // orval falls back to v4 option types, which v5 rejects.
+        query: {
+          version: 5,
+        },
         fetch: {
           includeHttpResponseReturnType: false,
         },
