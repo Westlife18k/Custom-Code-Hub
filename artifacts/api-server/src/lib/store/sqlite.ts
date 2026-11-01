@@ -112,12 +112,18 @@ function ensureDirectory(directory: string): void {
 
   for (const segment of segments) {
     current = path.join(current, segment);
+
+    let exists = false;
     try {
-      if (fs.statSync(current).isDirectory()) continue;
-      throw new Error(`${current} exists and is not a directory`);
+      exists = fs.statSync(current).isDirectory();
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== undefined) throw error;
+      if (code !== "ENOENT") throw error;
+    }
+
+    if (exists) continue;
+    if (fs.existsSync(current)) {
+      throw new Error(`${current} exists but is not a directory`);
     }
     fs.mkdirSync(current);
   }
