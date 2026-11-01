@@ -45,7 +45,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     PORT=3000 \
-    STATIC_DIR=/app/public
+    STATIC_DIR=/app/public \
+    SQLITE_PATH=/app/data/bet-code-hub.sqlite
 
 # Runtime dependencies (the API bundle externalizes native/unbundleable modules).
 COPY --from=build /app/node_modules ./node_modules
@@ -54,11 +55,17 @@ COPY --from=build /app/artifacts/api-server/package.json ./artifacts/api-server/
 COPY --from=build /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=build /app/artifacts/bet-code-hub-storefront/dist/public ./public
 
+# Writable location for the embedded SQLite database used when DATABASE_URL is
+# absent (the container runs as the unprivileged `node` user).
+RUN mkdir -p /app/data && chown -R node:node /app/data
+
 # Run as the unprivileged user that ships with the official Node image.
 USER node
 
 EXPOSE 3000
 
-# DATABASE_URL is required for the package/order/payment data routes.
+# Storage: set DATABASE_URL to use Postgres. When it is unset the API creates and
+# seeds an embedded SQLite database at SQLITE_PATH, so packages and orders work
+# with no external database (rows live in the container filesystem).
 # PAYSTACK_SECRET_KEY is required for checkout (Paystack initialize/verify + webhook).
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
