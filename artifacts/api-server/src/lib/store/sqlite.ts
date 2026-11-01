@@ -99,6 +99,31 @@ function candidatePaths(): string[] {
 }
 
 /**
+ * Creates a directory tree one segment at a time.
+ *
+ * `fs.mkdirSync(dir, { recursive: true })` can spin without ever throwing when
+ * the parent filesystem keeps answering `ENOENT` (seen with pseudo filesystems
+ * such as /proc), which would hang startup instead of letting us fall through to
+ * the next candidate. This bounded walk always terminates.
+ */
+function ensureDirectory(directory: string): void {
+  const segments = path.resolve(directory).split(path.sep).filter(Boolean);
+  let current = path.sep;
+
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    try {
+      if (fs.statSync(current).isDirectory()) continue;
+      throw new Error(`${current} exists and is not a directory`);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== undefined) throw error;
+    }
+    fs.mkdirSync(current);
+  }
+}
+
+/**
  * Opens the first candidate location that is actually usable. A read-only or
  * missing mount must not silently degrade to a throwaway in-memory database on
  * the first attempt, so every candidate gets a real write test before the
