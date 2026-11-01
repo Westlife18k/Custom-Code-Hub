@@ -1,5 +1,5 @@
 import app from "./app";
-import { bootstrapDatabase } from "./lib/bootstrap-db";
+import { prepareStore } from "./lib/store";
 import { logger } from "./lib/logger";
 
 const rawPort = process.env["PORT"];
@@ -17,29 +17,13 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 /**
- * The API can start without a reachable database so /api/healthz still reports
- * liveness, but every data route will then fail until Postgres is available.
+ * The API always starts: prepareStore() creates the schema and seeds the
+ * starter catalogue, retrying a configured Postgres a few times. When no
+ * DATABASE_URL is present the embedded SQLite backend is used instead, so
+ * packages and orders work on a bare deployment.
  */
-async function prepareDatabase(): Promise<void> {
-  if (!process.env["DATABASE_URL"]) {
-    logger.error("DATABASE_URL is not set; package and order routes will fail");
-    return;
-  }
-
-  const attempts = 5;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      await bootstrapDatabase();
-      return;
-    } catch (error) {
-      logger.error({ err: error, attempt, attempts }, "Database bootstrap failed");
-      if (attempt === attempts) return;
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
-    }
-  }
-}
-
-await prepareDatabase();
+const store = await prepareStore();
+logger.info({ backend: store.kind }, "Data backend ready");
 
 app.listen(port, (err) => {
   if (err) {
