@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
-import { asc, eq } from "drizzle-orm";
 
-import { db, packagesTable } from "@workspace/db";
 import { ListPackagesResponse } from "@workspace/api-zod";
+import { getStore } from "../lib/store";
 
 const router: IRouter = Router();
 
@@ -11,19 +10,7 @@ const router: IRouter = Router();
  * code is never included in the response.
  */
 router.get("/packages", async (_req, res) => {
-  const rows = await db
-    .select({
-      id: packagesTable.id,
-      title: packagesTable.title,
-      description: packagesTable.description,
-      price_kobo: packagesTable.priceKobo,
-      total_odds: packagesTable.totalOdds,
-      match_count: packagesTable.matchCount,
-    })
-    .from(packagesTable)
-    .where(eq(packagesTable.active, true))
-    .orderBy(asc(packagesTable.priceKobo));
-
+  const rows = await getStore().listActivePackages();
   res.json(ListPackagesResponse.parse(rows));
 });
 
