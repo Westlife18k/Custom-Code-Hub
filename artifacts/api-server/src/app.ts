@@ -32,9 +32,10 @@ app.use(
 );
 app.use(cors());
 
-// Paystack signs the raw request body, so this path must be parsed as a Buffer
-// before the JSON body parser consumes it.
-app.use("/api/payments/webhook", express.raw({ type: "*/*", limit: "1mb" }));
+// Paystack signs the raw request body, so these paths must be parsed as a
+// Buffer before the JSON body parser consumes them. Both the order webhook and
+// the wallet deposit webhook share the same signature scheme.
+app.use(["/api/payments/webhook", "/api/deposits/webhook"], express.raw({ type: "*/*", limit: "1mb" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
