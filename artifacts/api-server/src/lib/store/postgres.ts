@@ -11,10 +11,13 @@ import {
 import { logger } from "../logger";
 import { SEED_PACKAGES } from "./seed-data";
 import type {
+  AdminPackage,
   CreateDepositInput,
   CreateOrderInput,
+  CreatePackageInput,
   CreditDepositInput,
   CreditOutcome,
+  DeletePackageOutcome,
   DepositRecord,
   DepositStatus,
   OrderLookup,
@@ -23,6 +26,7 @@ import type {
   Store,
   StorePackage,
   StorePackagePrice,
+  UpdatePackageInput,
   WalletSummary,
 } from "./types";
 
@@ -117,6 +121,44 @@ const DEPOSIT_COLUMNS = {
   paidAt: depositsTable.paidAt,
   createdAt: depositsTable.createdAt,
 };
+
+const ADMIN_PACKAGE_COLUMNS = {
+  id: packagesTable.id,
+  title: packagesTable.title,
+  description: packagesTable.description,
+  priceKobo: packagesTable.priceKobo,
+  totalOdds: packagesTable.totalOdds,
+  matchCount: packagesTable.matchCount,
+  bettingCode: packagesTable.bettingCode,
+  active: packagesTable.active,
+  createdAt: packagesTable.createdAt,
+};
+
+type AdminPackageRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  priceKobo: number | bigint;
+  totalOdds: string | null;
+  matchCount: number | null;
+  bettingCode: string;
+  active: boolean;
+  createdAt: Date | string | null;
+};
+
+function mapAdminPackage(row: AdminPackageRow): AdminPackage {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? null,
+    pricePesewas: Number(row.priceKobo),
+    totalOdds: row.totalOdds ?? null,
+    matchCount: row.matchCount === null || row.matchCount === undefined ? null : Number(row.matchCount),
+    bettingCode: row.bettingCode,
+    active: Boolean(row.active),
+    createdAt: row.createdAt === null ? "" : new Date(row.createdAt).toISOString(),
+  };
+}
 
 /** Postgres/Drizzle implementation, used whenever DATABASE_URL is set. */
 export function createPostgresStore(): Store {
