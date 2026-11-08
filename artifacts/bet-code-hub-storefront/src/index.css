@@ -301,3 +301,59 @@ a { color: inherit; text-decoration: none; }
   .bch-amount-chips { gap: 6px; }
   .bch-chip { flex: 1 1 calc(50% - 6px); text-align: center; }
 }
+
+/* --- Owner panel (/admin) ------------------------------------------------ */
+.bch-admin-page { width: min(100%, 1040px); margin: 0 auto; padding: 40px 24px 72px; }
+.bch-admin-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 26px; color: var(--bch-muted); font-size: 12px; text-decoration: none; }
+.bch-admin-back:hover { color: var(--bch-gold); }
+.bch-admin-head h1 { margin: 8px 0 12px; font: 500 34px/1.15 'Space Grotesk', sans-serif; color: var(--bch-ink); }
+.bch-eyebrow { margin: 0; color: var(--bch-gold); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
+.bch-admin-sub { margin: 0 0 26px; max-width: 62ch; color: var(--bch-muted); font-size: 12.5px; line-height: 1.7; }
+.bch-admin-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.bch-admin-ghost { display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border: 1px solid var(--bch-line); border-radius: 7px; background: #11150f; color: var(--bch-ink); font: inherit; font-size: 12px; cursor: pointer; transition: border-color .18s ease, color .18s ease, background .18s ease; }
+.bch-admin-ghost:hover:not(:disabled) { border-color: var(--bch-gold); color: var(--bch-gold); }
+.bch-admin-ghost:disabled { opacity: .55; cursor: not-allowed; }
+.bch-admin-ghost.is-danger:hover:not(:disabled) { border-color: #b8564c; color: #e0897f; }
+.bch-admin-card { width: 100%; margin-bottom: 30px; }
+.bch-admin-form { margin-top: 18px; }
+.bch-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.bch-admin-field { display: grid; gap: 7px; }
+.bch-admin-field-wide { grid-column: 1 / -1; }
+.bch-admin-field label { color: #d3d7cf; font-size: 11px; font-weight: 600; }
+.bch-admin-check { display: inline-flex; align-items: center; gap: 9px; color: var(--bch-muted); font-size: 12px; cursor: pointer; }
+.bch-admin-check input { width: 16px; height: 16px; accent-color: var(--bch-gold); cursor: pointer; }
+.bch-admin-message { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; padding: 12px 14px; border-radius: 8px; font-size: 12px; line-height: 1.6; }
+.bch-admin-message svg { flex: none; margin-top: 1px; }
+.bch-admin-message.is-error { border: 1px solid rgba(184,86,76,.42); background: rgba(120,44,38,.16); color: #e6a49b; }
+.bch-admin-message.is-ok { border: 1px solid rgba(137,185,138,.3); background: rgba(66,104,67,.12); color: #c2d0bf; }
+.bch-admin-empty { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; color: var(--bch-muted); font-size: 12px; line-height: 1.65; }
+.bch-admin-empty strong { display: block; margin-bottom: 4px; color: var(--bch-ink); font-size: 12.5px; }
+.bch-admin-empty p { margin: 0; }
+.bch-admin-empty code { padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,.45); color: var(--bch-gold); font-size: 11.5px; }
+.bch-admin-list { margin-bottom: 26px; }
+.bch-admin-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.bch-admin-list-head h2 { margin: 0; font: 500 22px/1.2 'Space Grotesk', sans-serif; color: var(--bch-ink); }
+.bch-admin-count { color: var(--bch-muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.bch-admin-rows { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.bch-admin-row { display: grid; gap: 16px; padding: 18px; border: 1px solid var(--bch-line); border-radius: 11px; background: linear-gradient(150deg, rgba(24,29,25,.94), rgba(16,20,17,.97)); }
+.bch-admin-row-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bch-admin-row-title strong { color: var(--bch-ink); font-size: 14px; }
+.bch-admin-badge { padding: 3px 8px; border: 1px solid var(--bch-line); border-radius: 999px; color: var(--bch-muted); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; }
+.bch-admin-badge.is-live { border-color: rgba(137,185,138,.45); color: #a9c9a4; background: rgba(66,104,67,.16); }
+.bch-admin-code { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 9px 0 0; }
+.bch-admin-code code { padding: 5px 9px; border: 1px solid #2c332c; border-radius: 6px; background: rgba(0,0,0,.42); color: var(--bch-ink); font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; letter-spacing: .04em; word-break: break-all; }
+.bch-admin-price { color: var(--bch-gold); font-size: 13px; font-weight: 600; }
+.bch-admin-meta { color: var(--bch-muted); font-size: 11px; }
+.bch-admin-row-controls { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.bch-admin-inline-field { display: grid; gap: 6px; }
+.bch-admin-inline-field span { color: #d3d7cf; font-size: 10.5px; font-weight: 600; }
+.bch-admin-inline-field input { width: 128px; padding: 9px 11px; border: 1px solid #394239; border-radius: 7px; outline: none; background: #0f130f; color: var(--bch-ink); font-size: 12.5px; }
+.bch-admin-inline-field input:focus { border-color: #b89647; box-shadow: 0 0 0 3px rgba(223,185,94,.09); }
+@media (max-width: 760px) {
+  .bch-admin-page { padding: 26px 18px 56px; }
+  .bch-admin-head h1 { font-size: 26px; }
+  .bch-admin-grid { grid-template-columns: 1fr; }
+  .bch-admin-inline-field input { width: 100%; }
+  .bch-admin-row-controls { align-items: stretch; }
+  .bch-admin-row-controls .bch-admin-ghost { justify-content: center; }
+}
