@@ -7,6 +7,7 @@ import NotFound from '@/pages/not-found';
 import Storefront from '@/pages/Storefront';
 import MyCodes from '@/pages/MyCodes';
 import Wallet from '@/pages/Wallet';
+import Admin from '@/pages/Admin';
 import {
   Route,
   Switch,
@@ -48,6 +49,7 @@ function Router() {
         <Route path="/" component={Storefront} />
         <Route path="/my-codes" component={MyCodes} />
         <Route path="/wallet" component={Wallet} />
+        <Route path="/admin" component={Admin} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
