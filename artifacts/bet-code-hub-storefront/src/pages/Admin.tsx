@@ -71,6 +71,8 @@ export default function Admin() {
 
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Row awaiting an inline "are you sure?" — avoids a native confirm() dialog. */
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +256,7 @@ export default function Admin() {
 
   async function handleDelete(code: AdminCode) {
     if (!token) return;
-    if (!window.confirm(`Delete "${code.title}"? This cannot be undone.`)) return;
+    setConfirmId(null);
 
     setBusyId(code.id);
     setError(null);
@@ -552,15 +554,38 @@ export default function Admin() {
                       {code.active ? 'Hide' : 'Show'}
                     </button>
 
-                    <button
-                      type="button"
-                      className="bch-admin-ghost is-danger"
-                      onClick={() => void handleDelete(code)}
-                      disabled={busy}
-                      data-testid={`button-admin-delete-${code.bettingCode}`}
-                    >
-                      <Trash2 size={16} aria-hidden /> Delete
-                    </button>
+                    {confirmId === code.id ? (
+                      <span className="bch-admin-confirm">
+                        <button
+                          type="button"
+                          className="bch-admin-ghost is-danger"
+                          onClick={() => void handleDelete(code)}
+                          disabled={busy}
+                          data-testid={`button-admin-delete-confirm-${code.bettingCode}`}
+                        >
+                          <Trash2 size={16} aria-hidden /> Delete for good
+                        </button>
+                        <button
+                          type="button"
+                          className="bch-admin-ghost"
+                          onClick={() => setConfirmId(null)}
+                          disabled={busy}
+                          data-testid={`button-admin-delete-cancel-${code.bettingCode}`}
+                        >
+                          Cancel
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="bch-admin-ghost is-danger"
+                        onClick={() => setConfirmId(code.id)}
+                        disabled={busy}
+                        data-testid={`button-admin-delete-${code.bettingCode}`}
+                      >
+                        <Trash2 size={16} aria-hidden /> Delete
+                      </button>
+                    )}
                   </div>
                 </li>
               );
