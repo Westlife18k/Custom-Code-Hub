@@ -34,6 +34,52 @@ export type CreateOrderInput = {
   amountKobo: number;
 };
 
+export type DepositStatus = "pending" | "success" | "failed";
+
+/** A wallet deposit row as exposed to the API (never contains secrets). */
+export type DepositRecord = {
+  reference: string;
+  email: string;
+  amountPesewas: number;
+  status: DepositStatus;
+  channel: string | null;
+  paystackTransactionId: string | null;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+export type CreateDepositInput = {
+  reference: string;
+  email: string;
+  amountPesewas: number;
+  channel: string | null;
+};
+
+export type WalletSummary = {
+  email: string;
+  balancePesewas: number;
+};
+
+/**
+ * Result of trying to credit a verified deposit.
+ *
+ * `already_credited` is a success, not an error: it is what a replayed webhook
+ * or a repeated verification returns once the ledger row exists. `not_found`
+ * and `amount_mismatch` must never move money.
+ */
+export type CreditOutcome =
+  | "credited"
+  | "already_credited"
+  | "not_found"
+  | "amount_mismatch";
+
+export type CreditDepositInput = {
+  reference: string;
+  transactionId?: string | number | null;
+  /** Amount reported by Paystack; when present it must match the deposit. */
+  amountPesewas?: number | null;
+};
+
 /**
  * Minimal persistence surface used by the HTTP routes. Two implementations
  * exist so the API works with a provisioned Postgres database and, when none
