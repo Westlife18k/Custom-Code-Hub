@@ -15,6 +15,37 @@ export type StorePackagePrice = {
   priceKobo: number;
 };
 
+/**
+ * A package as the owner sees it in the admin panel: unlike the public
+ * catalogue it includes the betting code and whether it is on sale.
+ */
+export type AdminPackage = {
+  id: string;
+  title: string;
+  description: string | null;
+  pricePesewas: number;
+  totalOdds: string | null;
+  matchCount: number | null;
+  bettingCode: string;
+  active: boolean;
+  createdAt: string;
+};
+
+export type CreatePackageInput = {
+  title: string;
+  description: string | null;
+  pricePesewas: number;
+  totalOdds: string | null;
+  matchCount: number | null;
+  bettingCode: string;
+  active: boolean;
+};
+
+export type UpdatePackageInput = Partial<CreatePackageInput>;
+
+/** Outcome of a delete attempt, so the route can answer 404 vs 409 precisely. */
+export type DeletePackageOutcome = "deleted" | "not_found" | "has_orders";
+
 export type OrderSummary = {
   id: string;
   amountKobo: number;
@@ -92,6 +123,13 @@ export interface Store {
   bootstrap(): Promise<void>;
   listActivePackages(): Promise<StorePackage[]>;
   findActivePackage(id: string): Promise<StorePackagePrice | null>;
+
+  // --- Owner catalogue management (admin panel) ---------------------------
+  /** Every package, active or not, including the betting code. */
+  listAllPackages(): Promise<AdminPackage[]>;
+  createPackage(input: CreatePackageInput): Promise<AdminPackage>;
+  updatePackage(id: string, patch: UpdatePackageInput): Promise<AdminPackage | null>;
+  deletePackage(id: string): Promise<DeletePackageOutcome>;
   createOrder(input: CreateOrderInput): Promise<void>;
   /** Updates a status, optionally only when the row still has `currentStatus`. */
   updateOrderStatus(
