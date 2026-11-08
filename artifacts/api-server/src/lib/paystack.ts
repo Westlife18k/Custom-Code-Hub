@@ -59,6 +59,37 @@ export function createOrderReference(): string {
 
 export const ORDER_REFERENCE_PATTERN = /^BCH-[a-f0-9]{32}$/;
 
+/**
+ * Wallet deposit references use the `DEP-` prefix plus 32 hex characters.
+ * They are generated server-side for every deposit, so each attempt is unique
+ * and can never collide with an order reference.
+ */
+export function createDepositReference(): string {
+  return `DEP-${randomBytes(16).toString("hex")}`;
+}
+
+export const DEPOSIT_REFERENCE_PATTERN = /^DEP-[a-f0-9]{32}$/;
+
+export type PaystackKeyMode = "test" | "live" | "unknown";
+
+/**
+ * Paystack secret keys are prefixed `sk_test_` or `sk_live_`. Deposits are
+ * hard-limited to test mode, so this decides whether checkout may open.
+ */
+export function getPaystackKeyMode(): PaystackKeyMode {
+  const key = getPaystackSecretKey();
+  if (!key) return "unknown";
+  if (key.startsWith("sk_test_")) return "test";
+  if (key.startsWith("sk_live_")) return "live";
+  return "unknown";
+}
+
+/** Presence check only — the public key is never sent to the browser. */
+export function hasPaystackPublicKey(): boolean {
+  const key = process.env["PAYSTACK_PUBLIC_KEY"]?.trim();
+  return Boolean(key);
+}
+
 type PaystackEnvelope<T> = {
   status?: boolean;
   message?: string;
