@@ -126,6 +126,7 @@ export default function Storefront() {
           <nav className={`bch-nav${mobileMenuOpen ? ' is-open' : ''}`} aria-label="Main navigation">
             <a href="#packages" onClick={closeMenu} data-testid="link-packages">Packages</a>
             <Link href="/my-codes" onClick={closeMenu} data-testid="link-my-codes">My codes</Link>
+            <Link href="/wallet" onClick={closeMenu} data-testid="link-wallet">Wallet</Link>
             <a className="bch-nav-cta" href="#packages" onClick={closeMenu} data-testid="link-browse-packages">
               Browse packages <ArrowRight size={14} />
             </a>
