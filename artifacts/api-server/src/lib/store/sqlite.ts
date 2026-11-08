@@ -72,6 +72,34 @@ const SCHEMA_STATEMENTS = [
     created_at text not null default (datetime('now'))
   )`,
   `create index if not exists orders_customer_email_idx on orders (customer_email)`,
+  `create table if not exists deposits (
+    id text primary key,
+    reference text unique not null,
+    email text not null,
+    amount_pesewas integer not null check (amount_pesewas > 0),
+    currency text not null default 'GHS',
+    status text not null default 'pending' check (status in ('pending', 'success', 'failed')),
+    channel text,
+    paystack_transaction_id text,
+    paid_at text,
+    created_at text not null default (datetime('now'))
+  )`,
+  `create index if not exists deposits_email_idx on deposits (email, created_at desc)`,
+  `create table if not exists wallets (
+    email text primary key,
+    balance_pesewas integer not null default 0,
+    updated_at text not null default (datetime('now'))
+  )`,
+  // The unique constraint on deposit_reference is the hard guarantee that a
+  // deposit can never credit a wallet twice, whatever path (verify or webhook)
+  // gets there first.
+  `create table if not exists wallet_credits (
+    id text primary key,
+    deposit_reference text unique not null,
+    email text not null,
+    amount_pesewas integer not null,
+    created_at text not null default (datetime('now'))
+  )`,
 ];
 
 const DATABASE_FILENAME = "bet-code-hub.sqlite";
