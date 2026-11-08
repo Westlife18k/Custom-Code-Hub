@@ -253,5 +253,129 @@ export function createPostgresStore(): Store {
       if (!order) return null;
       return { status: order.status as OrderStatus, title: order.title, code: order.code };
     },
+
+    async createDeposit(input: CreateDepositInput): Promise<void> {
+      await db.insert(depositsTable).values({
+        reference: input.reference,
+        email: input.email.trim().toLowerCase(),
+        amountPesewas: input.amountPesewas,
+        status: "pending",
+        channel: input.channel,
+      });
+    },
+
+    async getDeposit(reference: string): Promise<DepositRecord | null> {
+      const [row] = await db
+        .select(DEPOSIT_COLUMNS)
+        .from(depositsTable)
+        .where(eq(depositsTable.reference, reference))
+        .limit(1);
+
+      return row ? mapDeposit(row) : null;
+    },
+
+    async updateDepositStatus(
+      reference: string,
+      status: DepositStatus,
+      currentStatus?: DepositStatus,
+    ): Promise<void> {
+      const where = currentStatus
+        ? and(eq(depositsTable.reference, reference), eq(depositsTable.status, currentStatus))
+        : eq(depositsTable.reference, reference);
+
+      await db.update(depositsTable).set({ status }).where(where);
+    },
+
+    async creditDeposit(input: CreditDepositInput): Promise<CreditOutcome> {
+      return await db.transaction(async (tx): Promise<CreditOutcome> => {
+        // Row lock: concurrent webhook + verify calls serialise here.
+        const [row] = await tx
+          .select({
+            email: depositsTable.email,
+            amountPesewas: depositsTable.amountPesewas,
+            status: depositsTable.status,
+          })
+          .from(depositsTable)
+          .where(eq(depositsTable.reference, input.reference))
+          .limit(1)
+          .for("update");
+
+        if (!row) return "not_found";
+
+        const amountPesewas = Number(row.amountPesewas);
+
+        if (row.status === "success") return "already_credited";
+
+        if (
+          typeof input.amountPesewas === "number" &&
+          Number.isFinite(input.amountPesewas) &&
+          input.amountPesewas !== amountPesewas
+        ) {
+          return "amount_mismatch";
+        }
+
+        const inserted = await tx
+          .insert(walletCreditsTable)
+          .values({
+            depositReference: input.reference,
+            email: row.email,
+            amountPesewas,
+          })
+          .onConflictDoNothing({ target: walletCreditsTable.depositReference })
+          .returning({ id: walletCreditsTable.id });
+
+        if (inserted.length === 0) return "already_credited";
+
+        await tx
+          .update(depositsTable)
+          .set({
+            status: "success",
+            paidAt: new Date(),
+            paystackTransactionId:
+              input.transactionId === undefined || input.transactionId === null
+                ? null
+                : String(input.transactionId),
+          })
+          .where(eq(depositsTable.reference, input.reference));
+
+        await tx
+          .insert(walletsTable)
+          .values({ email: row.email, balancePesewas: amountPesewas })
+          .onConflictDoUpdate({
+            target: walletsTable.email,
+            set: {
+              balancePesewas: sql`${walletsTable.balancePesewas} + ${amountPesewas}`,
+              updatedAt: new Date(),
+            },
+          });
+
+        return "credited";
+      });
+    },
+
+    async listDeposits(email: string, limit: number): Promise<DepositRecord[]> {
+      const rows = await db
+        .select(DEPOSIT_COLUMNS)
+        .from(depositsTable)
+        .where(eq(depositsTable.email, email.trim().toLowerCase()))
+        .orderBy(desc(depositsTable.createdAt), desc(depositsTable.reference))
+        .limit(limit);
+
+      return rows.map(mapDeposit);
+    },
+
+    async getWallet(email: string): Promise<WalletSummary> {
+      const normalised = email.trim().toLowerCase();
+      const [row] = await db
+        .select({ balancePesewas: walletsTable.balancePesewas })
+        .from(walletsTable)
+        .where(eq(walletsTable.email, normalised))
+        .limit(1);
+
+      return {
+        email: normalised,
+        balancePesewas: row ? Number(row.balancePesewas) : 0,
+      };
+    },
   };
 }
