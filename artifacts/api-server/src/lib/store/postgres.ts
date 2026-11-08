@@ -56,7 +56,67 @@ const SCHEMA_STATEMENTS = [
     created_at timestamptz not null default now()
   )`,
   sql`create index if not exists orders_customer_email_idx on orders (customer_email)`,
+  sql`create table if not exists deposits (
+    id uuid primary key default gen_random_uuid(),
+    reference text unique not null,
+    email text not null,
+    amount_pesewas bigint not null check (amount_pesewas > 0),
+    currency text not null default 'GHS',
+    status text not null default 'pending' check (status in ('pending', 'success', 'failed')),
+    channel text,
+    paystack_transaction_id text,
+    paid_at timestamptz,
+    created_at timestamptz not null default now()
+  )`,
+  sql`create index if not exists deposits_email_idx on deposits (email, created_at desc)`,
+  sql`create table if not exists wallets (
+    email text primary key,
+    balance_pesewas bigint not null default 0,
+    updated_at timestamptz not null default now()
+  )`,
+  // deposit_reference is UNIQUE so a deposit can never be credited twice,
+  // whichever path (webhook or verify) gets there first.
+  sql`create table if not exists wallet_credits (
+    id uuid primary key default gen_random_uuid(),
+    deposit_reference text unique not null,
+    email text not null,
+    amount_pesewas integer not null,
+    created_at timestamptz not null default now()
+  )`,
 ];
+
+function mapDeposit(row: {
+  reference: string;
+  email: string;
+  amountPesewas: number | string | bigint;
+  status: string;
+  channel: string | null;
+  paystackTransactionId: string | null;
+  paidAt: Date | string | null;
+  createdAt: Date | string | null;
+}): DepositRecord {
+  return {
+    reference: row.reference,
+    email: row.email,
+    amountPesewas: Number(row.amountPesewas),
+    status: row.status as DepositStatus,
+    channel: row.channel ?? null,
+    paystackTransactionId: row.paystackTransactionId ?? null,
+    paidAt: row.paidAt === null ? null : new Date(row.paidAt).toISOString(),
+    createdAt: row.createdAt === null ? "" : new Date(row.createdAt).toISOString(),
+  };
+}
+
+const DEPOSIT_COLUMNS = {
+  reference: depositsTable.reference,
+  email: depositsTable.email,
+  amountPesewas: depositsTable.amountPesewas,
+  status: depositsTable.status,
+  channel: depositsTable.channel,
+  paystackTransactionId: depositsTable.paystackTransactionId,
+  paidAt: depositsTable.paidAt,
+  createdAt: depositsTable.createdAt,
+};
 
 /** Postgres/Drizzle implementation, used whenever DATABASE_URL is set. */
 export function createPostgresStore(): Store {
