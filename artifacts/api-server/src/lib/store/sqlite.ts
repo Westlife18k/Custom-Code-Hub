@@ -202,6 +202,24 @@ function toNumber(value: unknown): number {
   return Number(value ?? 0);
 }
 
+function toText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  return String(value);
+}
+
+function mapDeposit(row: Record<string, unknown>): DepositRecord {
+  return {
+    reference: String(row["reference"]),
+    email: String(row["email"]),
+    amountPesewas: toNumber(row["amount_pesewas"]),
+    status: String(row["status"]) as DepositStatus,
+    channel: toText(row["channel"]),
+    paystackTransactionId: toText(row["paystack_transaction_id"]),
+    paidAt: toText(row["paid_at"]),
+    createdAt: String(row["created_at"] ?? ""),
+  };
+}
+
 /**
  * Embedded SQLite backend. Used when DATABASE_URL is not configured so the
  * storefront is data-driven out of the box: the schema is created and the
