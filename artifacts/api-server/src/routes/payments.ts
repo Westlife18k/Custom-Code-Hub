@@ -18,6 +18,7 @@ import {
 } from "../lib/paystack";
 import { getStore } from "../lib/store";
 import { logger } from "../lib/logger";
+import { handlePaystackWebhook } from "../lib/paystack-webhook";
 
 const router: IRouter = Router();
 

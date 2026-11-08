@@ -103,4 +103,22 @@ export interface Store {
   /** Flips a pending/failed order to paid. Returns true when it changed. */
   markOrderPaid(input: { reference: string; transactionId?: string | number | null }): Promise<boolean>;
   lookupOrder(input: { reference: string; email: string }): Promise<OrderLookup | null>;
+
+  // --- Wallet deposits (Paystack test mode) -------------------------------
+  createDeposit(input: CreateDepositInput): Promise<void>;
+  getDeposit(reference: string): Promise<DepositRecord | null>;
+  /** Only updates when the row still has `currentStatus`, when provided. */
+  updateDepositStatus(
+    reference: string,
+    status: DepositStatus,
+    currentStatus?: DepositStatus,
+  ): Promise<void>;
+  listDeposits(email: string, limit: number): Promise<DepositRecord[]>;
+  getWallet(email: string): Promise<WalletSummary>;
+  /**
+   * Credits a verified deposit exactly once. Implementations must be atomic so
+   * a webhook and a verify call racing on the same reference cannot double
+   * credit; the second caller receives `already_credited`.
+   */
+  creditDeposit(input: CreditDepositInput): Promise<CreditOutcome>;
 }

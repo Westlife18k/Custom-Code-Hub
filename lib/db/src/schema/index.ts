@@ -2,3 +2,4 @@
 // drizzle-kit and the server share the same table definitions.
 export * from "./packages";
 export * from "./orders";
+export * from "./wallets";
