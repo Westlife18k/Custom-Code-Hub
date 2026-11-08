@@ -1,16 +1,29 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { db, ordersTable, packagesTable } from "@workspace/db";
+import {
+  db,
+  depositsTable,
+  ordersTable,
+  packagesTable,
+  walletCreditsTable,
+  walletsTable,
+} from "@workspace/db";
 import { logger } from "../logger";
 import { SEED_PACKAGES } from "./seed-data";
 import type {
+  CreateDepositInput,
   CreateOrderInput,
+  CreditDepositInput,
+  CreditOutcome,
+  DepositRecord,
+  DepositStatus,
   OrderLookup,
   OrderStatus,
   OrderSummary,
   Store,
   StorePackage,
   StorePackagePrice,
+  WalletSummary,
 } from "./types";
 
 /**
