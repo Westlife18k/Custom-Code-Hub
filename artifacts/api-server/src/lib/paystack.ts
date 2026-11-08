@@ -162,8 +162,7 @@ export async function initializeTransaction(input: {
   return data;
 }
 
-export async function verifyTransaction(reference: string): Promise<PaystackVerifyResult> {
-  const data = await paystackRequest<PaystackVerifyResult>(
+export async function verifyTransaction(reference: string): Promise<PaystackVerifyResult> {  const data = await paystackRequest<PaystackVerifyResult>(
     `/transaction/verify/${encodeURIComponent(reference)}`,
     { method: "GET" },
   );
