@@ -328,6 +328,107 @@ export function createSqliteStore(): Store {
       return { id: String(row["id"]), priceKobo: toNumber(row["price_kobo"]) };
     },
 
+    async listAllPackages(): Promise<AdminPackage[]> {
+      const rows = open()
+        .prepare(
+          `select ${ADMIN_PACKAGE_COLUMNS}
+             from packages
+            order by created_at desc, title asc`,
+        )
+        .all();
+
+      return rows.map(mapAdminPackage);
+    },
+
+    async createPackage(input: CreatePackageInput): Promise<AdminPackage> {
+      const db = open();
+      const id = randomUUID();
+
+      db.prepare(
+        `insert into packages
+          (id, title, description, price_kobo, total_odds, match_count, betting_code, active)
+         values (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        id,
+        input.title,
+        input.description,
+        input.pricePesewas,
+        input.totalOdds,
+        input.matchCount,
+        input.bettingCode,
+        input.active ? 1 : 0,
+      );
+
+      const row = db
+        .prepare(`select ${ADMIN_PACKAGE_COLUMNS} from packages where id = ? limit 1`)
+        .get(id);
+
+      if (!row) throw new Error("Package insert did not return a row");
+      return mapAdminPackage(row);
+    },
+
+    async updatePackage(id: string, patch: UpdatePackageInput): Promise<AdminPackage | null> {
+      const db = open();
+      const sets: string[] = [];
+      const params: unknown[] = [];
+
+      if (patch.title !== undefined) {
+        sets.push("title = ?");
+        params.push(patch.title);
+      }
+      if (patch.description !== undefined) {
+        sets.push("description = ?");
+        params.push(patch.description);
+      }
+      if (patch.pricePesewas !== undefined) {
+        sets.push("price_kobo = ?");
+        params.push(patch.pricePesewas);
+      }
+      if (patch.totalOdds !== undefined) {
+        sets.push("total_odds = ?");
+        params.push(patch.totalOdds);
+      }
+      if (patch.matchCount !== undefined) {
+        sets.push("match_count = ?");
+        params.push(patch.matchCount);
+      }
+      if (patch.bettingCode !== undefined) {
+        sets.push("betting_code = ?");
+        params.push(patch.bettingCode);
+      }
+      if (patch.active !== undefined) {
+        sets.push("active = ?");
+        params.push(patch.active ? 1 : 0);
+      }
+
+      if (sets.length > 0) {
+        db.prepare(`update packages set ${sets.join(", ")} where id = ?`).run(...params, id);
+      }
+
+      const row = db
+        .prepare(`select ${ADMIN_PACKAGE_COLUMNS} from packages where id = ? limit 1`)
+        .get(id);
+
+      return row ? mapAdminPackage(row) : null;
+    },
+
+    async deletePackage(id: string): Promise<DeletePackageOutcome> {
+      const db = open();
+
+      const existing = db.prepare("select id from packages where id = ? limit 1").get(id);
+      if (!existing) return "not_found";
+
+      // Orders keep a foreign key to the package, so a sold code is retired by
+      // deactivating it instead of deleting the history behind it.
+      const orders = db
+        .prepare("select count(*) as n from orders where package_id = ?")
+        .get(id);
+      if (toNumber(orders?.["n"]) > 0) return "has_orders";
+
+      db.prepare("delete from packages where id = ?").run(id);
+      return "deleted";
+    },
+
     async createOrder(input: CreateOrderInput): Promise<void> {
       open()
         .prepare(
