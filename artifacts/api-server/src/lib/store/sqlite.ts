@@ -390,5 +390,152 @@ export function createSqliteStore(): Store {
         code: String(row["code"]),
       };
     },
+
+    async createDeposit(input: CreateDepositInput): Promise<void> {
+      open()
+        .prepare(
+          `insert into deposits (id, reference, email, amount_pesewas, status, channel)
+           values (?, ?, ?, ?, 'pending', ?)`,
+        )
+        .run(
+          randomUUID(),
+          input.reference,
+          input.email.trim().toLowerCase(),
+          input.amountPesewas,
+          input.channel,
+        );
+    },
+
+    async getDeposit(reference: string): Promise<DepositRecord | null> {
+      const row = open()
+        .prepare(
+          `select reference, email, amount_pesewas, status, channel,
+                  paystack_transaction_id, paid_at, created_at
+             from deposits
+            where reference = ?
+            limit 1`,
+        )
+        .get(reference);
+      return row ? mapDeposit(row) : null;
+    },
+
+    async updateDepositStatus(
+      reference: string,
+      status: DepositStatus,
+      currentStatus?: DepositStatus,
+    ): Promise<void> {
+      if (currentStatus) {
+        open()
+          .prepare(`update deposits set status = ? where reference = ? and status = ?`)
+          .run(status, reference, currentStatus);
+        return;
+      }
+      open().prepare(`update deposits set status = ? where reference = ?`).run(status, reference);
+    },
+
+    async creditDeposit(input: CreditDepositInput): Promise<CreditOutcome> {
+      const db = open();
+      // BEGIN IMMEDIATE takes the write lock up front, so two concurrent
+      // callers (webhook + verify) cannot both pass the status check.
+      db.exec("begin immediate");
+      try {
+        const row = db
+          .prepare(`select email, amount_pesewas, status from deposits where reference = ? limit 1`)
+          .get(input.reference);
+
+        if (!row) {
+          db.exec("rollback");
+          return "not_found";
+        }
+
+        const email = String(row["email"]);
+        const amountPesewas = toNumber(row["amount_pesewas"]);
+        const status = String(row["status"]) as DepositStatus;
+
+        if (status === "success") {
+          db.exec("rollback");
+          return "already_credited";
+        }
+
+        if (
+          typeof input.amountPesewas === "number" &&
+          Number.isFinite(input.amountPesewas) &&
+          input.amountPesewas !== amountPesewas
+        ) {
+          db.exec("rollback");
+          return "amount_mismatch";
+        }
+
+        const inserted = db
+          .prepare(
+            `insert or ignore into wallet_credits (id, deposit_reference, email, amount_pesewas)
+             values (?, ?, ?, ?)`,
+          )
+          .run(randomUUID(), input.reference, email, amountPesewas) as
+          | { changes?: number | bigint }
+          | undefined;
+
+        if (Number(inserted?.changes ?? 0) === 0) {
+          db.exec("rollback");
+          return "already_credited";
+        }
+
+        db.prepare(
+          `update deposits
+              set status = 'success',
+                  paid_at = datetime('now'),
+                  paystack_transaction_id = ?
+            where reference = ?`,
+        ).run(
+          input.transactionId === undefined || input.transactionId === null
+            ? null
+            : String(input.transactionId),
+          input.reference,
+        );
+
+        db.prepare(
+          `insert into wallets (email, balance_pesewas, updated_at)
+           values (?, ?, datetime('now'))
+           on conflict(email) do update
+             set balance_pesewas = wallets.balance_pesewas + excluded.balance_pesewas,
+                 updated_at = datetime('now')`,
+        ).run(email, amountPesewas);
+
+        db.exec("commit");
+        return "credited";
+      } catch (error) {
+        try {
+          db.exec("rollback");
+        } catch {
+          // The transaction was already rolled back.
+        }
+        throw error;
+      }
+    },
+
+    async listDeposits(email: string, limit: number): Promise<DepositRecord[]> {
+      const rows = open()
+        .prepare(
+          `select reference, email, amount_pesewas, status, channel,
+                  paystack_transaction_id, paid_at, created_at
+             from deposits
+            where email = ?
+            order by created_at desc, reference desc
+            limit ?`,
+        )
+        .all(email.trim().toLowerCase(), limit);
+      return rows.map(mapDeposit);
+    },
+
+    async getWallet(email: string): Promise<WalletSummary> {
+      const normalised = email.trim().toLowerCase();
+      const row = open()
+        .prepare(`select balance_pesewas from wallets where email = ? limit 1`)
+        .get(normalised);
+      return {
+        email: normalised,
+        balancePesewas: row ? toNumber(row["balance_pesewas"]) : 0,
+      };
+    },
   };
 }
