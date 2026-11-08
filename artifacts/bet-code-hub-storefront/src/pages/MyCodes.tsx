@@ -110,6 +110,7 @@ export default function MyCodes() {
           </Link>
           <nav className="bch-nav bch-nav-static" aria-label="Main navigation">
             <Link href="/" data-testid="link-home">Home</Link>
+            <Link href="/wallet" data-testid="link-wallet">Wallet</Link>
             <Link className="bch-nav-cta" href="/#packages" data-testid="link-browse-packages">
               Browse packages <ArrowRight size={14} />
             </Link>

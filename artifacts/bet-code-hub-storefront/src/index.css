@@ -275,3 +275,29 @@ a { color: inherit; text-decoration: none; }
 .bch-code-reveal code { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; letter-spacing: .04em; color: var(--bch-ink, #f3f1e7); word-break: break-all; padding: 10px 12px; border-radius: 7px; background: rgba(0,0,0,.42); border: 1px solid #2c332c; }
 .bch-code-reveal p { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--bch-muted, #98a196); }
 .bch-code-reveal .bch-card-button { justify-self: start; }
+
+/* Wallet / deposits */
+.bch-wallet-card > p { margin: 0; color: var(--bch-muted, #a1aaa1); font-size: 12px; line-height: 1.7; }
+.bch-wallet-balance { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.bch-wallet-amount { color: var(--bch-gold, #dfb95e); font: 600 clamp(30px, 5vw, 40px)/1.05 'Space Grotesk', sans-serif; letter-spacing: -.045em; }
+.bch-mode-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border: 1px solid #4a4936; border-radius: 999px; color: var(--bch-gold, #dfb95e); background: rgba(223,185,94,.07); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.bch-amount-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.bch-chip { border: 1px solid #394239; border-radius: 7px; background: #10140f; padding: 8px 11px; color: #c3cabf; font-size: 11px; font-weight: 600; cursor: pointer; transition: border-color .16s ease, color .16s ease, background .16s ease; }
+.bch-chip:hover { border-color: #6b5b35; color: var(--bch-gold, #dfb95e); }
+.bch-chip.is-active { border-color: var(--bch-gold, #dfb95e); background: rgba(223,185,94,.12); color: var(--bch-gold, #dfb95e); }
+.bch-deposit-list { display: grid; gap: 0; margin: 16px 0 0; padding: 0; list-style: none; }
+.bch-deposit-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--bch-line, #2a332c); }
+.bch-deposit-row:first-child { border-top: 1px solid var(--bch-line, #2a332c); }
+.bch-deposit-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.bch-deposit-main svg { flex: none; color: #8d978c; }
+.bch-deposit-main strong { display: block; color: var(--bch-ink, #f2f0e8); font: 600 14px 'Space Grotesk', sans-serif; }
+.bch-deposit-meta { display: block; margin-top: 3px; color: #7f8a7f; font-size: 10px; letter-spacing: .01em; word-break: break-all; }
+.bch-status-pill { flex: none; padding: 5px 9px; border: 1px solid #3c453b; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.bch-status-pill.is-success { border-color: rgba(137,185,138,.45); color: var(--bch-green, #89b98a); background: rgba(66,104,67,.14); }
+.bch-status-pill.is-pending { border-color: rgba(223,185,94,.4); color: var(--bch-gold, #dfb95e); background: rgba(112,84,28,.12); }
+.bch-status-pill.is-failed { border-color: #5d3a34; color: #d99b90; background: rgba(120,52,44,.14); }
+@media (max-width: 560px) {
+  .bch-deposit-row { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .bch-amount-chips { gap: 6px; }
+  .bch-chip { flex: 1 1 calc(50% - 6px); text-align: center; }
+}
