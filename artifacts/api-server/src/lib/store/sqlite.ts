@@ -7,13 +7,19 @@ import { createRequire } from "node:module";
 import { logger } from "../logger";
 import { SEED_PACKAGES } from "./seed-data";
 import type {
+  CreateDepositInput,
   CreateOrderInput,
+  CreditDepositInput,
+  CreditOutcome,
+  DepositRecord,
+  DepositStatus,
   OrderLookup,
   OrderStatus,
   OrderSummary,
   Store,
   StorePackage,
   StorePackagePrice,
+  WalletSummary,
 } from "./types";
 
 type SqliteStatement = {
