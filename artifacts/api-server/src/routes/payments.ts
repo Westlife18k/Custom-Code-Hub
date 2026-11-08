@@ -161,39 +161,11 @@ router.post("/payments/verify", async (req, res) => {
 
 /**
  * Paystack webhook. The raw body is required for the HMAC-SHA512 signature
- * check, so it is mounted with express.raw() in app.ts.
+ * check, so it is mounted with express.raw() in app.ts. Order and wallet
+ * deposit events share one validated handler.
  */
-router.post("/payments/webhook", async (req, res) => {
-  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
-
-  if (!isPaystackConfigured()) {
-    res.status(503).json({ error: "Payments are not configured on this deployment yet." });
-    return;
-  }
-
-  if (!isValidWebhookSignature(rawBody, req.get("x-paystack-signature"))) {
-    logger.warn("Rejected Paystack webhook with an invalid signature");
-    res.status(401).json({ error: "Invalid webhook signature." });
-    return;
-  }
-
-  let event: { event?: string; data?: { reference?: string; status?: string; id?: number; amount?: number } };
-  try {
-    event = JSON.parse(rawBody.toString("utf8"));
-  } catch {
-    res.status(400).json({ error: "Webhook body is not valid JSON." });
-    return;
-  }
-
-  if (event.event === "charge.success" && event.data?.reference && event.data.status === "success") {
-    await releaseOrder({
-      reference: event.data.reference,
-      transactionId: event.data.id,
-      amountKobo: typeof event.data.amount === "number" ? event.data.amount : null,
-    });
-  }
-
-  res.json(ReceivePaystackWebhookResponse.parse({ received: true }));
+router.post("/payments/webhook", (req, res) => {
+  void handlePaystackWebhook(req, res);
 });
 
 export default router;
