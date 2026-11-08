@@ -214,6 +214,82 @@ export function createPostgresStore(): Store {
       return { id: pkg.id, priceKobo: Number(pkg.priceKobo) };
     },
 
+    async listAllPackages(): Promise<AdminPackage[]> {
+      const rows = await db
+        .select(ADMIN_PACKAGE_COLUMNS)
+        .from(packagesTable)
+        .orderBy(desc(packagesTable.createdAt), asc(packagesTable.title));
+
+      return rows.map((row) => mapAdminPackage(row as AdminPackageRow));
+    },
+
+    async createPackage(input: CreatePackageInput): Promise<AdminPackage> {
+      const [row] = await db
+        .insert(packagesTable)
+        .values({
+          title: input.title,
+          description: input.description,
+          priceKobo: input.pricePesewas,
+          totalOdds: input.totalOdds,
+          matchCount: input.matchCount,
+          bettingCode: input.bettingCode,
+          active: input.active,
+        })
+        .returning(ADMIN_PACKAGE_COLUMNS);
+
+      if (!row) throw new Error("Package insert did not return a row");
+      return mapAdminPackage(row as AdminPackageRow);
+    },
+
+    async updatePackage(id: string, patch: UpdatePackageInput): Promise<AdminPackage | null> {
+      const values: Record<string, unknown> = {};
+
+      if (patch.title !== undefined) values["title"] = patch.title;
+      if (patch.description !== undefined) values["description"] = patch.description;
+      if (patch.pricePesewas !== undefined) values["priceKobo"] = patch.pricePesewas;
+      if (patch.totalOdds !== undefined) values["totalOdds"] = patch.totalOdds;
+      if (patch.matchCount !== undefined) values["matchCount"] = patch.matchCount;
+      if (patch.bettingCode !== undefined) values["bettingCode"] = patch.bettingCode;
+      if (patch.active !== undefined) values["active"] = patch.active;
+
+      if (Object.keys(values).length > 0) {
+        await db
+          .update(packagesTable)
+          .set(values as Partial<typeof packagesTable.$inferInsert>)
+          .where(eq(packagesTable.id, id));
+      }
+
+      const [row] = await db
+        .select(ADMIN_PACKAGE_COLUMNS)
+        .from(packagesTable)
+        .where(eq(packagesTable.id, id))
+        .limit(1);
+
+      return row ? mapAdminPackage(row as AdminPackageRow) : null;
+    },
+
+    async deletePackage(id: string): Promise<DeletePackageOutcome> {
+      const [existing] = await db
+        .select({ id: packagesTable.id })
+        .from(packagesTable)
+        .where(eq(packagesTable.id, id))
+        .limit(1);
+
+      if (!existing) return "not_found";
+
+      // Orders keep a foreign key to the package, so a sold code is retired by
+      // deactivating it instead of deleting the history behind it.
+      const [sold] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(ordersTable)
+        .where(eq(ordersTable.packageId, id));
+
+      if (Number(sold?.n ?? 0) > 0) return "has_orders";
+
+      await db.delete(packagesTable).where(eq(packagesTable.id, id));
+      return "deleted";
+    },
+
     async createOrder(input: CreateOrderInput): Promise<void> {
       await db.insert(ordersTable).values({
         reference: input.reference,
