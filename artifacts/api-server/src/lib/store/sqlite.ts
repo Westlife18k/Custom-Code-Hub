@@ -7,10 +7,13 @@ import { createRequire } from "node:module";
 import { logger } from "../logger";
 import { SEED_PACKAGES } from "./seed-data";
 import type {
+  AdminPackage,
   CreateDepositInput,
   CreateOrderInput,
+  CreatePackageInput,
   CreditDepositInput,
   CreditOutcome,
+  DeletePackageOutcome,
   DepositRecord,
   DepositStatus,
   OrderLookup,
@@ -19,6 +22,7 @@ import type {
   Store,
   StorePackage,
   StorePackagePrice,
+  UpdatePackageInput,
   WalletSummary,
 } from "./types";
 
@@ -219,6 +223,25 @@ function mapDeposit(row: Record<string, unknown>): DepositRecord {
     createdAt: String(row["created_at"] ?? ""),
   };
 }
+
+function mapAdminPackage(row: Record<string, unknown>): AdminPackage {
+  return {
+    id: String(row["id"]),
+    title: String(row["title"]),
+    description: toText(row["description"]),
+    pricePesewas: toNumber(row["price_kobo"]),
+    totalOdds: toText(row["total_odds"]),
+    matchCount: row["match_count"] === null || row["match_count"] === undefined
+      ? null
+      : toNumber(row["match_count"]),
+    bettingCode: String(row["betting_code"] ?? ""),
+    active: toNumber(row["active"]) === 1,
+    createdAt: String(row["created_at"] ?? ""),
+  };
+}
+
+const ADMIN_PACKAGE_COLUMNS =
+  "id, title, description, price_kobo, total_odds, match_count, betting_code, active, created_at";
 
 /**
  * Embedded SQLite backend. Used when DATABASE_URL is not configured so the
